@@ -1,0 +1,42 @@
+name: Build GeminiGL4ES iOS Renderer
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ios-arm64:
+    name: Compile iOS ARM64 (A9 - A18+)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build GeminiGL4ES (.dylib)
+        run: |
+          chmod +x scripts/build_ios.sh
+          ./scripts/build_ios.sh
+
+      - name: Verify Mach-O ARM64 Header & Exported GL Symbols
+        run: |
+          file dist/libgl4es_114.dylib
+          otool -L dist/libgl4es_114.dylib
+          nm -gU dist/libgl4es_114.dylib | grep -E "_glBegin|_glDrawElements|_glBindFramebuffer|_gemini_ios_early_init" | head -n 20
+
+      - name: Upload Amethyst-iOS Renderer Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeminiGL4ES-Amethyst-iOS-arm64
+          path: |
+            dist/libgl4es_114.dylib
+            dist/libgemini_gl4es.dylib
+          retention-days: 90
